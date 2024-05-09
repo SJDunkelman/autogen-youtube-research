@@ -1,0 +1,7 @@
+[
+  {
+    "base_url": "http://0.0.0.0:27490",
+    "api_key": "NULL",
+    "model": "ollama/codellama"
+  }
+]
