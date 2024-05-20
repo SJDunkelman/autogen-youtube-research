@@ -1,7 +1,7 @@
 # AutoGen: YouTube research
 
 ## Set up
-Install autogenstudio with a conda environment as shown (here)[https://autogen-studio.com/]
+Install autogenstudio with a conda environment as shown [here](https://autogen-studio.com/)
 > git clone ___
 > cd auto-gen-youtube-research
 > $ conda activate autogenstudio
