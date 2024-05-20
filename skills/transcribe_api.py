@@ -4,6 +4,7 @@ from tempfile import NamedTemporaryFile
 import json
 import os
 from tqdm import tqdm
+from dotenv import load_dotenv
 
 
 def chunk_audio(file_path, chunk_length_ms=300000):  # Set for 5 minutes
@@ -21,7 +22,8 @@ def transcribe_audio_file(audio_file_path: str) -> str:
 
     :param audio_file_path: str, File path of the audio file to transcribe
     """
-    api_url = "https://transcribe.whisperapi.com"
+    api_url = "https://api.lemonfox.ai/v1/audio/transcriptions"
+    load_dotenv()
     api_key = os.getenv("WHISPER_API_KEY")
     if api_key is None:
         raise ValueError("API key not found. Please set the WHISPER_API_KEY environment variable. TERMINATE")
@@ -39,19 +41,19 @@ def transcribe_audio_file(audio_file_path: str) -> str:
 
             files = {'file': open(tmp.name, 'rb')}
             data = {
-                "fileType": "wav",
-                "diarization": "True",
-                "task": "transcribe",
-                "language": "en"
+                "language": "en",
+                "response_format": "json"
             }
 
             response = requests.post(api_url, headers=headers, files=files, data=data)
-            response = json.loads(response.text)
-            if "error" in response.keys():
-                raise Exception(response.json()["error"])
-            print(f"Chunk {index + 1}:")
-            output_text_chunks.append(response['text'])
-            print(response['text'])
+            response_json = json.loads(response.text)
+            if 'text' in response_json:
+                print(f"Chunk {index + 1}:")
+                output_text_chunks.append(response_json['text'])
+                print(response_json['text'])
+            else:
+                print(f"Error in API response for chunk {index + 1}: {response_json.get('error', 'No error message')}")
+                print(response_json)
             files['file'].close()
 
     return " ".join(output_text_chunks)
