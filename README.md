@@ -37,7 +37,7 @@ Go to Google Cloud Console
 In the JSON you will see a field called "client_email". You must go to the spreadsheet you wish to upload to and share to this email with permissions to edit.
 
 The upload_dict_to_google_sheet skill in upload_to_gsheets.py takes spreadsheet_id as an argument. You can get this from the URL of the spreadsheet from the middle of the URL:
-https://docs.google.com/spreadsheets/d/COPY THIS ID/edit?=...
+https://docs.google.com/spreadsheets/d/ COPY THIS ID /edit?=...
 
 When you copy the "upload_dict_to_google_sheet" function from skills/upload_to_gsheets.py file, make sure to paste this key into where it says "creds_json = "
 There is an example commented out to show you, delete this when copying into autogen studio.
