@@ -32,17 +32,15 @@ def upload_dict_to_google_sheet(data_dict: dict, spreadsheet_id: str, sheet_name
     # Open the sheet
     sheet = client.open_by_key(spreadsheet_id).worksheet(sheet_name)
 
-    # Create DataFrame from the dictionary
-    df = pd.DataFrame(data_dict)
+    if all(isinstance(value, (int, float, str)) for value in data_dict.values()):
+        # Handling scalar values: turning them into a DataFrame with keys as one column and values as another
+        data_to_upload = list(data_dict.items())
+    else:
+        # For non-scalar values: default behavior
+        df = pd.DataFrame(data_dict)
+        data_to_upload = [df.columns.values.tolist()] + df.values.tolist()
 
-    # Convert DataFrame to list of lists
-    data_to_upload = [df.columns.values.tolist()] + df.values.tolist()
-
-    # Upload data
-    sheet.update('A1', data_to_upload)
+        # Upload data without headers
+    sheet.update('A1', data_to_upload, value_input_option='RAW')
     print(
         f'Successfully uploaded data. Check your Google Sheet: https://docs.google.com/spreadsheets/d/{spreadsheet_id}')
-
-
-    question = input('What would you like to ask of the image?')
-
