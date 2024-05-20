@@ -1,42 +1,25 @@
-from selenium import webdriver
-from webdriver_manager.chrome import ChromeDriverManager
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+import cloudscraper
 from bs4 import BeautifulSoup
-import time
-
-# Set up Chrome options
-options = Options()
-options.add_argument('start-maximized')  # Maximize the window to simulate a real user's screen
-options.add_argument('disable-infobars')
-options.add_argument('--disable-extensions')
-# User agent string of a commonly used browser
-options.add_argument('user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36')
+import urllib.parse
+import re
 
 
-# Initialize WebDriver
-def get_channel_stats(channel_url: str):
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+def get_channel_stats(username: str) -> tuple[dict[str, str], str | None]:
+    """
+    Get the stats for a YouTube channel via the channel username
+
+    :param username: str, YouTube channel username
+    :return: tuple[dict[str, str], str | None], dictionary of channel stats and channel ID
+    """
+    scraper = cloudscraper.create_scraper()
 
     # URL of the channel page
-    url = 'https://socialblade.com/youtube/channel/UCigUBIf-zt_DA6xyOQtq2WA/videos'
-    driver.get(url)
+    encoded_username = urllib.parse.quote(username)
+    html = scraper.get(f"https://socialblade.com/youtube/s/?q={encoded_username}").text
+    soup = BeautifulSoup(html, 'lxml')
 
-    # WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div/div[2]/div[5]/button[2]')))
-    time.sleep(10)  # Adding a sleep to ensure all scripts are loaded and button is clickable
-    iframe = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'iframe[title="SP Consent Message"]')))
-    driver.switch_to.frame(iframe)
-    accept_button = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div/div[2]/div[5]/button[2]')))
-    accept_button.click()
-
-    # Switch back to the main document to continue with other operations
-    driver.switch_to.default_content()
-
-    # Extract specific data points
-    soup = BeautifulSoup(driver.page_source, 'lxml')
+    banner_image = soup.find('div', id='YouTubeUserTopHeaderBackground')
+    channel_id_match = re.search(r'(?<=https://www\.banner\.yt/)(.+)(?=\?)',banner_image['style'])
 
     # Select all divs with class "YouTubeUserTopInfo"
     data_divs = soup.select('div.YouTubeUserTopInfo')
@@ -57,29 +40,12 @@ def get_channel_stats(channel_url: str):
         elif "User Created" in text:
             data['User Created'] = cleaned_text.split('User Created')[1].strip()
 
-    for key, value in data.items():
-        print(f"{key}: {value}")
+    # for key, value in data.items():
+    #     print(f"{key}: {value}")
 
-    videos_div = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, 'YouTube-Video-Wrap')))
-    driver.execute_script("arguments[0].scrollIntoView();", videos_div)
+    if channel_id_match:
+        channel_id = channel_id_match.group(0)
+    else:
+        channel_id = None
 
-    # Ensure the div is scrolled into view and loaded
-    time.sleep(3)
-    soup = BeautifulSoup(driver.page_source, 'lxml')
-
-    video_wrap = soup.find('div', id='YouTube-Video-Wrap')
-    video_child_divs = video_wrap.find_all('div', recursive=False)
-    videos_info = []
-    for div in video_child_divs:
-        a_tags = div.find_all('a')
-        if len(a_tags) >= 2:
-            video_a_tag = a_tags[0]
-            href = video_a_tag.get('href', None)
-            text = video_a_tag.text.strip()
-            videos_info.append({'text': text, 'href': href})
-
-    for video in videos_info:
-        print(f"Video Title: {video['text']}, Link: {video['href']}")
-
-    # Close the browser
-    driver.quit()
+    return data, channel_id
