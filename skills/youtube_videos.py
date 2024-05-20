@@ -18,11 +18,17 @@ options.add_argument('user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) Apple
 
 
 # Initialize WebDriver
-def get_channel_stats(channel_url: str):
+def get_recent_channel_videos(channel_id: str) -> list[tuple[str, str]]:
+    """
+    Get the recent channel videos for a YouTube channel via the channel ID
+
+    :param channel_id: str, YouTube channel ID (this is not the same as the username)
+    :return: list[tuple[str, str]], list of tuples containing video title and video link
+    """
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 
     # URL of the channel page
-    url = 'https://socialblade.com/youtube/channel/UCigUBIf-zt_DA6xyOQtq2WA/videos'
+    url = f'https://socialblade.com/youtube/channel/{channel_id}/videos'
     driver.get(url)
 
     # WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div/div[2]/div[5]/button[2]')))
@@ -35,35 +41,9 @@ def get_channel_stats(channel_url: str):
     # Switch back to the main document to continue with other operations
     driver.switch_to.default_content()
 
-    # Extract specific data points
-    soup = BeautifulSoup(driver.page_source, 'lxml')
-
-    # Select all divs with class "YouTubeUserTopInfo"
-    data_divs = soup.select('div.YouTubeUserTopInfo')
-    data = {}
-    for idx, div in enumerate(data_divs):
-        text = div.text.strip()
-        cleaned_text = text.split('\n')[0]
-        if "Uploads" in text:
-            data['Uploads'] = cleaned_text.split('Uploads')[1].strip()
-        elif "Subscribers" in text:
-            data['Subscribers'] = cleaned_text.split('Subscribers')[1].strip()
-        elif "Video Views" in text:
-            data['Video Views'] = cleaned_text.split('Video Views')[1].strip()
-        elif "Country" in text:
-            data['Country'] = cleaned_text.split('Country')[1].strip()
-        elif "Channel Type" in text:
-            data['Channel Type'] = cleaned_text.split('Channel Type')[1].strip()
-        elif "User Created" in text:
-            data['User Created'] = cleaned_text.split('User Created')[1].strip()
-
-    for key, value in data.items():
-        print(f"{key}: {value}")
-
+    # Ensure the div is scrolled into view and loaded
     videos_div = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, 'YouTube-Video-Wrap')))
     driver.execute_script("arguments[0].scrollIntoView();", videos_div)
-
-    # Ensure the div is scrolled into view and loaded
     time.sleep(3)
     soup = BeautifulSoup(driver.page_source, 'lxml')
 
@@ -78,8 +58,11 @@ def get_channel_stats(channel_url: str):
             text = video_a_tag.text.strip()
             videos_info.append({'text': text, 'href': href})
 
+    output = []
     for video in videos_info:
-        print(f"Video Title: {video['text']}, Link: {video['href']}")
+        # print(f"Video Title: {video['text']}, Link: {video['href']}")
+        output.append((video['text'], video['href']))
 
     # Close the browser
     driver.quit()
+    return output

@@ -26,6 +26,15 @@ assistant = autogen.AssistantAgent(
     llm_config=llm_config_llama3
 )
 
+summarisation_agent = autogen.ConversableAgent(
+    "summariser",
+    system_message="Your task is to summarise transcriptions of YouTube videos to give a very concise description of the content.",
+    llm_config=llm_config_llama3,
+    code_execution_config=False,  # Turn off code execution, by default it is off.
+    function_map=None,  # No registered functions, by default it is None.
+    human_input_mode="NEVER",  # Never ask for human input.
+)
+
 # concierge = autogen.ConversableAgent(
 #     "concierge",
 #     system_message="Your task is to get the URL of the video the user wants to transcribe.",

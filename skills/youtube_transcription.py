@@ -1,19 +1,11 @@
-import pytube as pt
-from uuid import uuid4
 from pydub import AudioSegment
-from config import PROJECT_ROOT_DIR
+import whisper
+import numpy as np
+
+model = whisper.load_model("tiny")
 
 
-def download_youtube_audio(url: str) -> str:
-    yt = pt.YouTube(url)
-    stream = yt.streams.filter(only_audio=True)[0]
-    file_name = f"{uuid4()}.mp3"
-    file_path = PROJECT_ROOT_DIR / "input" / file_name
-    stream.download(filename=file_path)
-    return file_name
-
-
-def chunk_audio(file_path, chunk_length_ms=300000):  # Set for 5 minutes
+def chunk_audio(file_path, chunk_length_ms=60000):  # Set for 1 minute
     audio = AudioSegment.from_wav(file_path)
     chunks = []
 
@@ -22,5 +14,29 @@ def chunk_audio(file_path, chunk_length_ms=300000):  # Set for 5 minutes
     return chunks
 
 
-if __name__ == "__main__":
-    download_youtube_audio("https://www.youtube.com/watch?v=dd1kN_myNDs")
+def transcribe_audio(audio_file_path: str):
+    """
+    Transcribe the audio of a file using OpenAI's Whisper model.
+
+    :param audio_file_path: str, File path of the audio file to transcribe
+    """
+    original_audio = AudioSegment.from_file(audio_file_path, format='m4a')
+    converted_file_path = audio_file_path.replace('.m4a', '.wav')
+    original_audio.export(converted_file_path, format='wav')
+    audio_chunks = chunk_audio(converted_file_path)
+
+    transcriptions = []
+    for chunk in audio_chunks:
+        # Convert Pydub audio chunk to the appropriate format for Whisper
+        audio_data = np.array(chunk.get_array_of_samples())
+        if chunk.channels == 2:
+            audio_data = audio_data.reshape((-1, 2))
+
+        # Transcribe the chunk
+        result = model.transcribe(audio_data, fp16=False)
+        transcriptions.append(result.text)
+
+    # Combine all transcriptions into a single string
+    full_transcription = " ".join(transcriptions)
+    return full_transcription
+
